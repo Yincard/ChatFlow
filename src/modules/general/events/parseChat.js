@@ -1,3 +1,4 @@
+const { ChannelType  } = require("discord.js");
 const Event = require('../../../../structures/Event');
 require('dotenv').config();
 
@@ -10,7 +11,9 @@ class ParseChat extends Event {
 	}
 
 	async execute(client, message) {
-		if (client.user.id === message.author.id) return;
+		
+		if (message.author.bot) return;
+		if (message.channel.type === ChannelType.DM) return;
 
 		const { id: guildId } = message.guild;
 		const { id: channelId } = message.channel;
