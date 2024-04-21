@@ -5,16 +5,6 @@ class DatabaseManager {
 	constructor() {
 		this.prefix = '[DATABASE]';
 		this.messageSchema = messageSchema;
-		this.localCache = {
-			guildId: String,
-			channels: {
-				[String]: {
-					[String]: {
-						[String]: Number,
-					},
-				},
-			},
-		}
 	}
 	async connect(mongoURI) {
 		mongoose.connect(mongoURI)
