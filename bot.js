@@ -12,13 +12,15 @@ const client = new Client({
 	},
 });
 
-client.slashData = [];
-client.commands = new Collection();
-client.token = process.env.TOKEN;
-
 const ResourceManager = new (require('./managers/ResourceManager'))(client);
 const DatabaseManager = new (require('./managers/DatabaseManager'))();
 const CacheManager = new (require('./managers/CacheManager'))();
+
+client.slashData = [];
+client.commands = new Collection();
+client.token = process.env.TOKEN;
+client.database = DatabaseManager;
+client.cache = CacheManager;
 
 client.login(client.token).finally(async () => {
 	
@@ -29,10 +31,7 @@ client.login(client.token).finally(async () => {
 
 	DatabaseManager.connect(process.env.DATABASE);
 	CacheManager.connect(process.env.REDIS_CACHE);
-
-	client.database = DatabaseManager;
-	client.cache = CacheManager;
-
+	
 	console.log(`[DISCORD] Logged in as ${client.user.tag}`);
 });
 
