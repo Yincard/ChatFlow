@@ -12,8 +12,7 @@ class ParseChat extends Event {
 
 	async execute(client, message) {
 
-		if (message.author.bot) return;
-		if (message.channel.type === ChannelType.DM) return;
+		if (message.author.bot || message.channel.type === ChannelType.DM) return;
 
 		const { id: guildId } = message.guild;
 		const { id: channelId } = message.channel;
