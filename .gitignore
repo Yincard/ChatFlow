@@ -1,5 +1,7 @@
 node_modules/
 .github/
+!.github/*
+!.github/workflows/
 .env
 package.json
 package-lock.json
