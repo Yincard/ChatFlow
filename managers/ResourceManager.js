@@ -47,6 +47,7 @@ class ResourceManager {
                     }
 
                     this.client.commands.set(command.name, command);
+					
                     try {
                         SlashCommands.push(command);
                         await rest.put(Routes.applicationCommands(this.client.user.id), { body: SlashCommands });

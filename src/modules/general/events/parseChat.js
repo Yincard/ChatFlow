@@ -11,7 +11,7 @@ class ParseChat extends Event {
 	}
 
 	async execute(client, message) {
-		
+
 		if (message.author.bot) return;
 		if (message.channel.type === ChannelType.DM) return;
 
@@ -19,7 +19,7 @@ class ParseChat extends Event {
 		const { id: channelId } = message.channel;
 		const { id: authorId } = message.author;
 		const currentDate = new Date();
-		currentDate.setDate(currentDate.getDate() - 1);
+		currentDate.setDate(currentDate.getDate());
 		const today = currentDate.toISOString().split('T')[0];
 		let guildCache = await client.cache.getGuildData(guildId);
 
