@@ -24,14 +24,14 @@ client.cache = CacheManager;
 
 client.login(client.token).finally(async () => {
 	
-	await ResourceManager.loadCmdData('../src');
+	await ResourceManager.loadData('../src');
 	console.log(
 		`${ResourceManager.prefix} Loaded ${(ResourceManager.totalSize / 1024).toFixed(2)}MB of resources`
 	);
 
 	DatabaseManager.connect(process.env.DATABASE);
 	CacheManager.connect(process.env.REDIS_CACHE);
-	
+
 	console.log(`[DISCORD] Logged in as ${client.user.tag}`);
 });
 
