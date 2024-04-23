@@ -1,49 +1,43 @@
-const { ChannelType  } = require("discord.js");
+const { ChannelType } = require("discord.js");
 const Event = require('../../../../structures/Event');
 require('dotenv').config();
 
 class ParseChat extends Event {
-	constructor() {
-		super({
-			name: 'messageCreate',
-			once: false,
-		});
-	}
+    constructor() {
+        super({
+            name: 'messageCreate',
+            once: false,
+        });
+    }
 
-	async execute(client, message) {
+    async execute(client, message) {
+        if (message.author.bot || message.channel.type === ChannelType.DM) return;
 
-		if (message.author.bot || message.channel.type === ChannelType.DM) return;
+        const currentDate = new Date();
+        const today = currentDate.toISOString().split('T')[0];
 
-		const { id: guildId } = message.guild;
-		const { id: channelId } = message.channel;
-		const { id: authorId } = message.author;
-		const currentDate = new Date();
-		currentDate.setDate(currentDate.getDate());
-		const today = currentDate.toISOString().split('T')[0];
-		let guildCache = await client.cache.getGuildData(guildId);
+        const { id: guildId } = message.guild;
+        const { id: channelId } = message.channel;
+        const { id: authorId } = message.author;
 
-		if (!guildCache) {
-			guildCache = {
-				channels: {
-					[channelId]: {
-						[today]: {
-							[authorId]: 1,
-						},
-					},
-				},
-			};
+        if (!client.cache.batchQueue[guildId]) {
+            client.cache.batchQueue[guildId] = {};
+        }
 
-		} else {
-			guildCache.channels[channelId] = {
-				[today]: {
-					...guildCache.channels[channelId]?.[today],
-					[authorId]: (guildCache.channels[channelId]?.[today]?.[authorId] || 0) + 1,
-				},
-			};
-		}
+        if (!client.cache.batchQueue[guildId][channelId]) {
+            client.cache.batchQueue[guildId][channelId] = {};
+        }
 
-		await client.cache.setGuildData(guildId, guildCache);
-	}
+        if (!client.cache.batchQueue[guildId][channelId][today]) {
+            client.cache.batchQueue[guildId][channelId][today] = {};
+        }
+
+        if (!client.cache.batchQueue[guildId][channelId][today][authorId]) {
+            client.cache.batchQueue[guildId][channelId][today][authorId] = 0; // Initialize to 0
+        }
+
+        client.cache.batchQueue[guildId][channelId][today][authorId]++; // Increment count
+    }
 }
 
 module.exports = ParseChat;

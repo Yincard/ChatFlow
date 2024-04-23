@@ -16,7 +16,8 @@ class Ready extends Event {
 		});
 
 		await client.cache.startInvalidationInterval(client);
-
+		await client.cache.startWriteToCacheInterval(client);
+		
 	}
 }
 
