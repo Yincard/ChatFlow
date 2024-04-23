@@ -8,12 +8,13 @@ class DatabaseManager {
 	}
 	async connect(mongoURI) {
 		mongoose.connect(mongoURI)
-		mongoose.connection.once('error', console.error);
-		mongoose.connection.on('open', () => {
-			console.log(`${this.prefix} Established connection with database`);
-		});
+		mongoose.connection.once('error', (error) => {
+			console.error(error);
+			return false;
+		})
+		mongoose.connection.on('open', () => { return true; });
 	}
-	
+
 }
 
 module.exports = DatabaseManager;

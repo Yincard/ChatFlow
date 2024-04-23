@@ -14,25 +14,28 @@ const client = new Client({
 
 const ResourceManager = new (require('./managers/ResourceManager'))(client);
 const DatabaseManager = new (require('./managers/DatabaseManager'))();
-const CacheManager = new (require('./managers/CacheManager'))();
+const CacheManager = new (require('./managers/CacheManager'))(DatabaseManager);
 
 client.slashData = [];
 client.commands = new Collection();
 client.token = process.env.TOKEN;
 client.database = DatabaseManager;
 client.cache = CacheManager;
+client.resources = ResourceManager
 
 client.login(client.token).finally(async () => {
-	
+
 	await ResourceManager.loadData('../src');
-	console.log(
-		`${ResourceManager.prefix} Loaded ${(ResourceManager.totalSize / 1024).toFixed(2)}MB of resources`
-	);
+	const loadDatabaseSystem = DatabaseManager.connect(process.env.DATABASE);
+	const initCacheSystem = CacheManager.connect(process.env.REDIS_CACHE);
 
-	DatabaseManager.connect(process.env.DATABASE);
-	CacheManager.connect(process.env.REDIS_CACHE);
-
-	console.log(`[DISCORD] Logged in as ${client.user.tag}`);
+	console.table(client.resources.logs)
+	console.table({
+		"[DISCORD]": `Logged in as ${client.user.tag}`,
+		"[RESOURCE]": `Loaded ${(ResourceManager.totalSize / 1024).toFixed(2)}MB of resources`,
+		"[DATABASE]": loadDatabaseSystem ? "Connected to MongoDB Instance" : "Error Connecting",
+		"[CACHE]": initCacheSystem ? "Loaded & Connected Cache Instances" : "Error Loading",
+	  });
 });
 
 const handleErrors = (type, err, origin) => {

@@ -19,14 +19,14 @@ class ParseChat extends Event {
         const { id: channelId } = channel;
         const { id: authorId } = author;
 
-        const { batchQueue } = client.cache;
+        const { localCacheQueue } = client.cache;
 
-        batchQueue[guildId] ??= {};
-        batchQueue[guildId][channelId] ??= {};
-        batchQueue[guildId][channelId][today] ??= {};
-        batchQueue[guildId][channelId][today][authorId] ??= 0;
+        localCacheQueue[guildId] ??= {};
+        localCacheQueue[guildId][channelId] ??= {};
+        localCacheQueue[guildId][channelId][today] ??= {};
+        localCacheQueue[guildId][channelId][today][authorId] ??= 0;
 
-        batchQueue[guildId][channelId][today][authorId]++;
+        localCacheQueue[guildId][channelId][today][authorId]++;
     }
 }
 

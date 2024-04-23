@@ -4,35 +4,39 @@ config();
 
 class CacheManager {
 
-    constructor() {
+    constructor(MongoDB) {
         this.prefix = '[CACHE]';
         this.redisClient;
-        this.batchQueue = {};
-        this.existingData = {};
+        this.localCacheQueue = {};
+        this.redisCache = {};
         this.batchInterval = 10000;
         this.invalidateInterval = 30000;
         this.chatKey = process.env.CHAT_KEY
+        this.MongoDB = MongoDB;
     }
 
     async connect(redisURI) {
         this.redisClient = await createClient({ url: redisURI })
-            .on('connect', () => this.log("Established connection with Cache"))
-            .on('error', error => this.log("Error in Redis connection:", error))
+            .on('connect', () => { return true; })
+            .on('error', (error) => {
+                this.log("Error in Redis connection:", error)
+                return false;
+            })
             .connect();
 
         await this.bulkReadRedisCache();
     }
 
     async bulkReadRedisCache() {
-        const keys = await this.fetchAllKeys(this.chatKey)
+        const keys = await this.redisClient.keys(`${this.chatKey}*`);
         const length = keys.length;
 
         if (length) {
-            for (const key of keys) {
-                const rawData = await this.redisClient.get(key);
-                const guildId = key.split('_')[1];
-                this.existingData[guildId] = JSON.parse(rawData);
-            }
+            const rawData = await Promise.all(keys.map(key => this.redisClient.get(key)));
+            rawData.forEach((data, index) => {
+                const guildId = keys[index].split('_')[1];
+                this.redisCache[guildId] = JSON.parse(data);
+            });
             this.log(`Locally Cached Redis-Cache Keys [${length}]`);
         } else {
             this.log("Initialized With Empty Redis-Cache");
@@ -56,9 +60,9 @@ class CacheManager {
     }
 
     async parseLocalCache() {
-        for (const [guildId, channels] of Object.entries(this.batchQueue)) {
-            const key = `bot_${guildId}`;
-            let existingData = this.existingData[guildId] || {};
+        for (const [guildId, channels] of Object.entries(this.localCacheQueue)) {
+            const startTime = Date.now();
+            let existingData = this.redisCache[guildId] || {};
             const bulkOperations = [];
 
             for (const [channelId, channelData] of Object.entries(channels)) {
@@ -74,10 +78,10 @@ class CacheManager {
             }
 
             const value = JSON.stringify(existingData);
-            bulkOperations.push(['SET', key, value]);
-            delete this.batchQueue[guildId];
-            this.existingData[guildId] = existingData;
-            this.log(`Redis-Cached Guild Queue: ${guildId}`);
+            bulkOperations.push(['SET', `bot_${guildId}`, value]);
+            delete this.localCacheQueue[guildId];
+            this.redisCache[guildId] = existingData;
+            this.log(`Redis-Cached Local Storage Queue - ${Date.now() - startTime}ms.`);
             this.log("Synced Local Memory Storage");
 
             try {
@@ -88,15 +92,15 @@ class CacheManager {
         }
     }
 
-    async invalidateRedisCache(client, keys) {
+    async invalidateRedisCache(keys) {
         const batchSize = 50;
         const batches = Array.from({ length: Math.ceil(keys.length / batchSize) }, (_, i) => keys.slice(i * batchSize, (i + 1) * batchSize));
-        await Promise.all(batches.map(batch => this.bulkMongoWrite(client, batch)));
+        await Promise.all(batches.map(batch => this.bulkMongoWrite(batch)));
     }
 
-    async bulkMongoWrite(client, keys) {
+    async bulkMongoWrite(keys) {
 
-        const Messages = client.database.messageSchema;
+        const Messages = this.MongoDB.messageSchema;
         await Promise.all(keys.map(async key => {
             const startTime = Date.now();
             const guildId = key.split('_')[1];
@@ -129,7 +133,7 @@ class CacheManager {
 
             try {
                 await this.redisClient.del(key);
-                this.existingData[guildId] = {}
+                this.redisCache[guildId] = {}
             } catch (err) {
                 this.log("Error deleting Redis key:", err);
             }
@@ -138,15 +142,15 @@ class CacheManager {
         }));
     }
 
-    async startInvalidationInterval(client) {
+    async startInvalidationInterval() {
         setInterval(async () => {
-            const keys = await this.fetchAllKeys(this.chatKey)
+            const keys = await this.redisClient.keys(`${this.chatKey}*`);
             const keyLength = keys.length;
 
             if (keyLength) {
                 this.log("Processing Redis-Cache Queue.");
                 try {
-                    await this.invalidateRedisCache(client, keys);
+                    await this.invalidateRedisCache(keys);
                 } catch (error) {
                     this.log("Error during cache invalidation and storage:", error);
                 }
@@ -158,7 +162,7 @@ class CacheManager {
 
     async startWriteToCacheInterval() {
         setInterval(async () => {
-            const queueLength = Object.keys(this.batchQueue).length;
+            const queueLength = Object.keys(this.localCacheQueue).length;
 
             if (queueLength) {
                 this.log("Processing Local Memory Queue.");
@@ -172,11 +176,6 @@ class CacheManager {
                 this.log("No Queued Local Memory Storage to Redis-Cache.");
             }
         }, this.batchInterval);
-    }
-
-    async fetchAllKeys(key) {
-        const keys = await this.redisClient.keys(key + "*");
-        return keys;
     }
 
     log(msg, err) {

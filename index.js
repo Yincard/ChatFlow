@@ -7,7 +7,9 @@ const shard = new ShardingManager('./bot.js', {
 });
 
 shard.on("shardCreate", async (shard) => {
-   console.log(`[SHARDING] Launched shard #${shard.id}`)
+    console.table([
+        { "[SHARDING]": `Launched shard #${shard.id}`}
+    ]);
 })
 
-shard.spawn({timeout: -1})
+shard.spawn({ timeout: -1 })
