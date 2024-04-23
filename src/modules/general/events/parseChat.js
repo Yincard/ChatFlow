@@ -13,30 +13,20 @@ class ParseChat extends Event {
     async execute(client, message) {
         if (message.author.bot || message.channel.type === ChannelType.DM) return;
 
-        const currentDate = new Date();
-        const today = currentDate.toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+        const { guild, channel, author } = message;
+        const { id: guildId } = guild;
+        const { id: channelId } = channel;
+        const { id: authorId } = author;
 
-        const { id: guildId } = message.guild;
-        const { id: channelId } = message.channel;
-        const { id: authorId } = message.author;
+        const { batchQueue } = client.cache;
 
-        if (!client.cache.batchQueue[guildId]) {
-            client.cache.batchQueue[guildId] = {};
-        }
+        batchQueue[guildId] ??= {};
+        batchQueue[guildId][channelId] ??= {};
+        batchQueue[guildId][channelId][today] ??= {};
+        batchQueue[guildId][channelId][today][authorId] ??= 0;
 
-        if (!client.cache.batchQueue[guildId][channelId]) {
-            client.cache.batchQueue[guildId][channelId] = {};
-        }
-
-        if (!client.cache.batchQueue[guildId][channelId][today]) {
-            client.cache.batchQueue[guildId][channelId][today] = {};
-        }
-
-        if (!client.cache.batchQueue[guildId][channelId][today][authorId]) {
-            client.cache.batchQueue[guildId][channelId][today][authorId] = 0; // Initialize to 0
-        }
-
-        client.cache.batchQueue[guildId][channelId][today][authorId]++; // Increment count
+        batchQueue[guildId][channelId][today][authorId]++;
     }
 }
 
