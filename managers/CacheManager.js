@@ -154,8 +154,6 @@ class CacheManager {
                 } catch (error) {
                     this.log("Error during cache invalidation and storage:", error);
                 }
-            } else {
-                this.log("No Queued Redis-Cache for Cache Invalidation.");
             }
         }, this.invalidateInterval);
     }
@@ -172,8 +170,6 @@ class CacheManager {
                 } catch (error) {
                     this.log("Error writing to cache:", error);
                 }
-            } else {
-                this.log("No Queued Local Memory Storage to Redis-Cache.");
             }
         }, this.batchInterval);
     }

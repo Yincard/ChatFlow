@@ -35,7 +35,7 @@ client.login(client.token).finally(async () => {
 		"[RESOURCE]": `Loaded ${(ResourceManager.totalSize / 1024).toFixed(2)}MB of resources`,
 		"[DATABASE]": loadDatabaseSystem ? "Connected to MongoDB Instance" : "Error Connecting",
 		"[CACHE]": initCacheSystem ? "Loaded & Connected Cache Instances" : "Error Loading",
-	  });
+	});
 });
 
 const handleErrors = (type, err, origin) => {
