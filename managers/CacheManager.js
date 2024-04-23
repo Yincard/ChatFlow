@@ -9,10 +9,11 @@ class CacheManager {
         this.redisClient;
         this.localCacheQueue = {};
         this.redisCache = {};
-        this.batchInterval = 10000;
+        this.batchInterval = 15000;
         this.invalidateInterval = 30000;
         this.chatKey = process.env.CHAT_KEY
         this.MongoDB = MongoDB;
+        this.approveMongoWrite = false;
     }
 
     async connect(redisURI) {
@@ -38,6 +39,7 @@ class CacheManager {
                 this.redisCache[guildId] = JSON.parse(data);
             });
             this.log(`Locally Cached Redis-Cache Keys [${length}]`);
+            this.approveMongoWrite = true;
         } else {
             this.log("Initialized With Empty Redis-Cache");
         }
@@ -81,6 +83,7 @@ class CacheManager {
             bulkOperations.push(['SET', `bot_${guildId}`, value]);
             delete this.localCacheQueue[guildId];
             this.redisCache[guildId] = existingData;
+            this.approveMongoWrite = true;
             this.log(`Redis-Cached Local Storage Queue - ${Date.now() - startTime}ms.`);
             this.log("Synced Local Memory Storage");
 
@@ -99,17 +102,15 @@ class CacheManager {
     }
 
     async bulkMongoWrite(keys) {
-
         const Messages = this.MongoDB.messageSchema;
-        await Promise.all(keys.map(async key => {
-            const startTime = Date.now();
-            const guildId = key.split('_')[1];
-            let data = await this.redisClient.get(key);
-            data = JSON.parse(data) || {};
-
+        const bulkOperations = [];
+        let startTime;
+        for (const key of keys) {
+            startTime = Date.now();
+            const guildId = key;
+            const data = this.redisCache[guildId];
             const filter = { guildId };
 
-            const bulkOperations = [];
 
             for (const [channelID, channelDataForDates] of Object.entries(data)) {
                 for (const [date, userData] of Object.entries(channelDataForDates)) {
@@ -126,28 +127,29 @@ class CacheManager {
             }
 
             try {
-                await Messages.bulkWrite(bulkOperations);
-            } catch (err) {
-                this.log("Error Bulk Writing Operations:", err);
-            }
-
-            try {
-                await this.redisClient.del(key);
-                this.redisCache[guildId] = {}
+                await this.redisClient.del(`bot_${guildId}`);
+                this.redisCache[guildId] = {};
+                this.approveMongoWrite = false;
             } catch (err) {
                 this.log("Error deleting Redis key:", err);
             }
+        }
+        this.log(`Redis Cache Invalidated - ${Date.now() - startTime}ms.`);
 
-            this.log(`Redis cache invalidated & Stored successfully - ${Date.now() - startTime}ms.`);
-        }));
+        try {
+            await Messages.bulkWrite(bulkOperations);
+
+        } catch (err) {
+            this.log("Error Bulk Writing Operations:", err);
+        }
     }
 
     async startInvalidationInterval() {
         setInterval(async () => {
-            const keys = await this.redisClient.keys(`${this.chatKey}*`);
-            const keyLength = keys.length;
+            const keys = Object.keys(this.redisCache);
+            const length = keys.length;
 
-            if (keyLength) {
+            if (length && this.approveMongoWrite) {
                 this.log("Processing Redis-Cache Queue.");
                 try {
                     await this.invalidateRedisCache(keys);
