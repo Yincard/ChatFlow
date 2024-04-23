@@ -19,6 +19,7 @@ const CacheManager = new (require('./managers/CacheManager'))();
 client.slashData = [];
 client.commands = new Collection();
 client.token = process.env.TOKEN;
+client.chatKey = process.env.chatKey;
 client.database = DatabaseManager;
 client.cache = CacheManager;
 
