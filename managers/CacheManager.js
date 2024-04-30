@@ -14,14 +14,18 @@ class CacheManager {
         this.chatKey = process.env.CHAT_KEY
         this.MongoDB = MongoDB;
         this.approveMongoWrite = false;
+
+        this.redisReady = false;
+        this.redisCached = false;
     }
 
     async connect(redisURI) {
         this.redisClient = await createClient({ url: redisURI })
-            .on('connect', () => { return true; })
+            .on('connect', async () => {
+                this.redisReady = true;
+            })
             .on('error', (error) => {
-                this.log("Error in Redis connection:", error)
-                return false;
+                console.err(error)
             })
             .connect();
 
@@ -29,7 +33,7 @@ class CacheManager {
     }
 
     async bulkReadRedisCache() {
-        const keys = await this.redisClient.keys(`${this.chatKey}*`);
+        const keys = await this.redisClient.keys(`${this.chatKey}*`)
         const length = keys.length;
 
         if (length) {
@@ -43,6 +47,8 @@ class CacheManager {
         } else {
             this.log("Initialized With Empty Redis-Cache");
         }
+
+        this.redisCached = true;
     }
 
     async bulkWriteRedisCache(commands) {

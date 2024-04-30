@@ -7,14 +7,14 @@ class DatabaseManager {
 		this.messageSchema = messageSchema;
 	}
 	async connect(mongoURI) {
-		mongoose.connect(mongoURI)
-		mongoose.connection.once('error', (error) => {
+		try {
+			await mongoose.connect(mongoURI);
+			return true;
+		} catch (error) {
 			console.error(error);
 			return false;
-		})
-		mongoose.connection.on('open', () => { return true; });
+		}
 	}
-
 }
 
 module.exports = DatabaseManager;
