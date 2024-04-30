@@ -84,7 +84,7 @@ class CacheManager {
             delete this.localCacheQueue[guildId];
             this.redisCache[guildId] = existingData;
             this.approveMongoWrite = true;
-            this.log(`Redis-Cached Local Storage Queue - ${Date.now() - startTime}ms.`);
+            this.log(`Redis-Cached Local Storage - ${Date.now() - startTime}ms.`);
             this.log("Synced Local Memory Storage");
 
             try {

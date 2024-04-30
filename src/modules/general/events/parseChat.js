@@ -25,9 +25,9 @@ class ParseChat extends Event {
         localCacheQueue[guildId][channelId] ??= {};
         localCacheQueue[guildId][channelId][today] ??= {};
         localCacheQueue[guildId][channelId][today][authorId] ??= 0;
-
         localCacheQueue[guildId][channelId][today][authorId]++;
     }
 }
 
 module.exports = ParseChat;
+

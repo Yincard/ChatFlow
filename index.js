@@ -12,4 +12,7 @@ shard.on("shardCreate", async (shard) => {
     ]);
 })
 
+
+
+
 shard.spawn({ timeout: -1 })
