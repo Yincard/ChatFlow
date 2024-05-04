@@ -4,19 +4,24 @@ config();
 
 class CacheManager {
 
-    constructor(MongoDB) {
+    constructor(MongoDB, client = null) {
         this.prefix = '[CACHE]';
+        this.client = client;
         this.redisClient;
+
         this.localCacheQueue = {};
         this.redisCache = {};
+        this.apiCache = {}
+
         this.batchInterval = 15000;
         this.invalidateInterval = 30000;
-        this.chatKey = process.env.CHAT_KEY
+
         this.MongoDB = MongoDB;
         this.approveMongoWrite = false;
-
         this.redisReady = false;
         this.redisCached = false;
+
+        this.chatKey = process.env.CHAT_KEY
     }
 
     async connect(redisURI) {
@@ -79,8 +84,12 @@ class CacheManager {
                 for (const [date, userData] of Object.entries(channelData)) {
                     existingData[channelId][date] ??= {};
 
-                    for (const [authorId, count] of Object.entries(userData)) {
-                        existingData[channelId][date][authorId] = (existingData[channelId][date][authorId] || 0) + count;
+                    for (const [authorId, userObj] of Object.entries(userData)) {
+                        existingData[channelId][date][authorId] = {
+                            count: (existingData[channelId][date][authorId]?.count || 0) + userObj.count,
+                            username: userObj.username,
+                            avatar: userObj.avatar,
+                        };
                     }
                 }
             }
@@ -117,14 +126,21 @@ class CacheManager {
             const data = this.redisCache[guildId];
             const filter = { guildId };
 
-
             for (const [channelID, channelDataForDates] of Object.entries(data)) {
                 for (const [date, userData] of Object.entries(channelDataForDates)) {
-                    for (const [userId, count] of Object.entries(userData)) {
+                    for (const [userId, userObj] of Object.entries(userData)) {
+                        const updateDocument = {
+                            $inc: { [`channels.${channelID}.${date}.${userId}.count`]: userObj.count },
+                            $set: {
+                                [`channels.${channelID}.${date}.${userId}.username`]: userObj.username,
+                                [`channels.${channelID}.${date}.${userId}.avatar`]: userObj.avatar
+                            }
+                        };
+
                         bulkOperations.push({
                             updateOne: {
                                 filter,
-                                update: { $inc: { [`channels.${channelID}.${date}.${userId}`]: count } },
+                                update: updateDocument,
                                 upsert: true,
                             },
                         });
@@ -134,6 +150,7 @@ class CacheManager {
 
             try {
                 await this.redisClient.del(`bot_${guildId}`);
+                delete this.apiCache[guildId];
                 this.redisCache[guildId] = {};
                 this.approveMongoWrite = false;
             } catch (err) {
@@ -144,7 +161,6 @@ class CacheManager {
 
         try {
             await Messages.bulkWrite(bulkOperations);
-
         } catch (err) {
             this.log("Error Bulk Writing Operations:", err);
         }

@@ -4,10 +4,7 @@ require('dotenv').config();
 
 class ParseChat extends Event {
     constructor() {
-        super({
-            name: 'messageCreate',
-            once: false,
-        });
+        super({ name: 'messageCreate', once: false });
     }
 
     async execute(client, message) {
@@ -18,16 +15,26 @@ class ParseChat extends Event {
         const { id: guildId } = guild;
         const { id: channelId } = channel;
         const { id: authorId } = author;
-
         const { localCacheQueue } = client.cache;
 
         localCacheQueue[guildId] ??= {};
         localCacheQueue[guildId][channelId] ??= {};
         localCacheQueue[guildId][channelId][today] ??= {};
-        localCacheQueue[guildId][channelId][today][authorId] ??= 0;
-        localCacheQueue[guildId][channelId][today][authorId]++;
+
+        if (!localCacheQueue[guildId][channelId][today][authorId]) {
+            const user = await client.users.cache.get(authorId);
+            const avatar = user.displayAvatarURL({ forceStatic: true, format: 'png', size: 64 });
+            const username = user.username;
+
+            localCacheQueue[guildId][channelId][today][authorId] = {
+                count: 0,
+                username,
+                avatar,
+            };
+        }
+
+        localCacheQueue[guildId][channelId][today][authorId].count++;
     }
 }
 
 module.exports = ParseChat;
-
