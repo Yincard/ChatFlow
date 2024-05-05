@@ -32,7 +32,7 @@ class ParseChat extends Event {
                 avatar,
             };
         }
-
+        
         localCacheQueue[guildId][channelId][today][authorId].count++;
     }
 }

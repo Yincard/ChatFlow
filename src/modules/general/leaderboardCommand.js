@@ -14,8 +14,8 @@ class leaderboardCommand extends Command {
         return interaction.reply({
             embeds: [new EmbedBuilder()
                 .setColor("#ffc20c")
-                .setTitle("Work in Progress - View Updates Here")
-                .setURL("https://github.com/Yincard/ChatFlow")
+                .setTitle("Click Here")
+                .setURL("http://54.146.234.160/")
             ]
         })
     }
