@@ -15,9 +15,6 @@ class Ready extends Event {
 			activities: [{ name: "To Your Messages", type: ActivityType.Listening }],
 		});
 
-		await client.cache.startInvalidationInterval();
-		await client.cache.startWriteToCacheInterval();
-		
 	}
 }
 

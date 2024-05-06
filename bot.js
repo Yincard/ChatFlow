@@ -15,31 +15,44 @@ const client = new Client({
 
 const ResourceManager = new (require('./managers/ResourceManager'))(client);
 const DatabaseManager = new (require('./managers/DatabaseManager'))();
-const CacheManager = new (require('./managers/CacheManager'))(DatabaseManager, client);
+const CacheManager = new (require('./managers/CacheManager'))(DatabaseManager);
 const APIManager = new (require('./managers/APIManager'))(DatabaseManager, CacheManager);
 
 client.slashData = [];
 client.commands = new Collection();
 client.token = process.env.TOKEN;
 client.database = DatabaseManager;
-client.cache = CacheManager;
+client.cacheManager = CacheManager;
 client.resources = ResourceManager
+client.api = APIManager;
+
+(async () => {
+	try {
+
+		await DatabaseManager.reqMongoose(process.env.DATABASE);
+		await DatabaseManager.reqRedis(process.env.REDIS_CACHE);
+
+		APIManager.connect(process.env.PORT);
+		
+		await client.cacheManager.bulkReadRedisCache();
+		await client.cacheManager.startInvalidationInterval();
+		await client.cacheManager.startWriteToCacheInterval();
+
+	} catch (error) {
+		console.error('An error occurred during initialization:', error);
+	}
+})();
 
 client.login(client.token).finally(async () => {
 
 	await ResourceManager.loadData('../src');
-	const loadDatabaseSystem = DatabaseManager.connect(process.env.DATABASE);
-	const initCacheSystem = CacheManager.connect(process.env.REDIS_CACHE);
-	const apiSystem = APIManager.connect(process.env.PORT);
-	APIManager.setupRoutes(); 
-
 	console.table(client.resources.logs)
 	console.table({
 		"[DISCORD]": `Logged in as ${client.user.tag}`,
 		"[RESOURCE]": `Loaded ${(ResourceManager.totalSize / 1024).toFixed(2)}MB of resources`,
-		"[DATABASE]": loadDatabaseSystem ? "Connected to MongoDB Instance" : "Error Connecting",
-		"[CACHE]": initCacheSystem ? "Loaded & Connected Cache Instances" : "Error Loading",
-		"[API]": !apiSystem ? `Listening on port ${process.env.PORT}` : "Error Loading",
+		"[DATABASE]": client.database.mongoose.mongoReady ? "Connected to Database Instances" : "Error Connecting",
+		"[CACHE]": (client.database.redis.redisReady && client.cacheManager.cache.redisCached) ? "Loaded & Connected Cache Instances" : "Error Loading",
+		"[API]": client.api.serverReady ? `Listening on port ${process.env.PORT}` : "Error Loading",
 	});
 });
 

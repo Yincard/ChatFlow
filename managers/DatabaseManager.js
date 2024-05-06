@@ -1,20 +1,49 @@
 const mongoose = require('mongoose');
+const { createClient } = require('redis');
+require('dotenv').config();
+
 const messageSchema = require('../models/Messages')
 
 class DatabaseManager {
 	constructor() {
 		this.prefix = '[DATABASE]';
-		this.messageSchema = messageSchema;
+
+		this.mongoose = {
+			messageSchema: messageSchema,
+			mongoReady: false
+		}
+
+		this.redis = {
+			client: null,
+			redisReady: false,
+		}
+
 	}
-	async connect(mongoURI) {
+	async reqMongoose(mongoURI) {
+
 		try {
 			await mongoose.connect(mongoURI);
-			return true;
+			this.mongoose.mongoReady = true;
 		} catch (error) {
 			console.error(error);
-			return false;
 		}
+		return this.mongoReady;
 	}
+
+	async reqRedis(redisURI) {
+		this.redis.client = await createClient({ url: redisURI })
+			.on('connect', async () => {
+				this.redis.redisReady = true;
+			})
+			.on('error', (error) => {
+				console.err(error)
+			})
+			.connect();
+		return this.redis.redisReady;
+	}
+	
+
+	
 }
 
 module.exports = DatabaseManager;

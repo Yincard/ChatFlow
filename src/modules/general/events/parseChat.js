@@ -15,7 +15,7 @@ class ParseChat extends Event {
         const { id: guildId } = guild;
         const { id: channelId } = channel;
         const { id: authorId } = author;
-        const { localCacheQueue } = client.cache;
+        const { localCacheQueue } = client.cacheManager.cache
 
         localCacheQueue[guildId] ??= {};
         localCacheQueue[guildId][channelId] ??= {};
